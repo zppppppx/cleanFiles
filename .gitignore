@@ -1,0 +1,13 @@
+# xlsx files
+*.xlsx
+
+# python env
+__pycache__
+.pytest_cache
+.vscode
+
+# test files
+test.py
+tt.py
+fileSrc
+templates
