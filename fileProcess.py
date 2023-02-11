@@ -173,8 +173,8 @@ class cleanFile:
 
             # Use the new information to fill the overall dataframe
 
-            print("The memroy has been used with {} for info and {} for order"
-                  .format(self.df_info.info(verbose=False, memory_usage='deep'), self.df_order.info(verbose=False, memory_usage='deep')))
+            # print("The memroy has been used with {} for info and {} for order"
+            #       .format(self.df_info.info(verbose=False, memory_usage='deep'), self.df_order.info(verbose=False, memory_usage='deep')))
 
 
             # self.df.set_index(keys=[first_name_entry, last_name_entry], inplace=True)
