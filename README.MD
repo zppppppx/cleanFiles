@@ -11,7 +11,7 @@ After walking through all the files in the directory, we aggregate the two dataf
 
 
 # Usage
-Now, this is just a very naive demo.
+Now, this is just a **very naive** demo.
 
 The file tree should be like:
 
@@ -25,8 +25,14 @@ The file tree should be like:
 
 Some key params in `mainProcess.py`:
 
-`config`: the file path of `config.txt`, this file contains all the names of entries, each line stands for one column names. In each line, the first word is a marker used by the program, please don't change it. The following words are the standard name and aliases of the column. The first word should and must be the standard name. Each name is separated by `,`.
+`config`: the file path of `config.txt`, this file contains all the names of entries, each line stands for one column names. In each line, the first word is a marker used by the program, please don't change it. The following words are the standard name and aliases of the column. The first word should and must be the standard name. Each name is separated by `,`. The more aliases provided, the more accurate and cleaner it is to sweep over the files.
 
 `file_root`: the root of all the `xlsx` files.
 
-`output_file`: the output path for the file
+`output_file`: the output path for the file.
+
+
+> **PAY ATTENTION:** 
+> 
+> 1. due to the limitation of the `pandas`, which leads to obvious slowing down when reading extremly large files, please separate the files into smaller pieces as much as possible.
+> 2. After reading in a file, `pandas` would consume more storage than the size of the file, one estimation is that the size consumed by `pandas` is 6x times greater than the file's original file, e.g. 10 MB -> 70 MB in RAM.
