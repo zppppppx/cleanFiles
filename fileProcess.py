@@ -202,7 +202,8 @@ class cleanFile:
 
         first_name_entry = self.column_standard['first-name'] # first name column
         last_name_entry = self.column_standard['last-name'] # last name column
-        tube_entry = self.column_standard['tube-number']
+        dob_entry = self.column_standard['date-of-birth'] # date of birth column
+        tube_entry = self.column_standard['tube-number'] # order id column
 
         # Aggregate the data of personal information and order id
         self.df_order.reset_index(inplace=True)
@@ -213,8 +214,14 @@ class cleanFile:
 
         self.df = self.df[self.column_standard.values()] # reset to standard column order
         self.df.dropna(subset=[tube_entry, first_name_entry, last_name_entry], how='any', inplace=True) # discard the data that still has no order id
-        self.df[first_name_entry] = self.df[first_name_entry].map(lambda x: x.strip())
-        self.df[last_name_entry] = self.df[last_name_entry].map(lambda x: x.strip())
+
+        # Clean the forms of the data
+        self.df[first_name_entry] = self.df[first_name_entry].map(lambda x: x.strip()) # strip all the blank space
+        self.df[last_name_entry] = self.df[last_name_entry].map(lambda x: x.strip()) # strip all the blank space
+
+        # self.df[dob_entry] = pd.to_datetime(self.df[dob_entry], errors='coerce') # standardlize the date time representation
+        # self.df[dob_entry] = pd.PeriodIndex(self.df[dob_entry], freq='D')
+        # self.df[dob_entry] = self.df[dob_entry]
 
         self.df = self.df.sort_values(by=[first_name_entry, last_name_entry]) # sort by names
     

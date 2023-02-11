@@ -36,3 +36,4 @@ Some key params in `mainProcess.py`:
 > 
 > 1. due to the limitation of the `pandas`, which leads to obvious slowing down when reading extremly large files, please separate the files into smaller pieces as much as possible.
 > 2. After reading in a file, `pandas` would consume more storage than the size of the file, one estimation is that the size consumed by `pandas` is 6x times greater than the file's original file, e.g. 10 MB -> 70 MB in RAM.
+> 3. Notice that this demo does not have any functions to correct the content of the file. If there is a mistake in the file, e.g., dislocation of the contents (phone number in the DOB), this could be a disaster.
