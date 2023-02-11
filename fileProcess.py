@@ -212,6 +212,10 @@ class cleanFile:
         self.df.reset_index(inplace=True)
 
         self.df = self.df[self.column_standard.values()] # reset to standard column order
-        self.df.dropna(subset=[tube_entry], inplace=True) # discard the data that still has no order id
+        self.df.dropna(subset=[tube_entry, first_name_entry, last_name_entry], how='any', inplace=True) # discard the data that still has no order id
+        self.df[first_name_entry] = self.df[first_name_entry].map(lambda x: x.strip())
+        self.df[last_name_entry] = self.df[last_name_entry].map(lambda x: x.strip())
+
+        self.df = self.df.sort_values(by=[first_name_entry, last_name_entry]) # sort by names
     
             
