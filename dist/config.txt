@@ -1,0 +1,41 @@
+tube-number: Order ID, Tube Number
+doc: Date of Collection
+test-result: Test Result, Result
+location: Location
+test-date: Test Date
+patient-ID: Patient ID
+pt-type: PT Type
+school: School
+grade-department: Grade/Department
+classroom: Classroom
+student-employee-ID: Student/Employee ID #
+first-name: First Name
+last-name: Last Name
+date-of-birth: DOB, Birth Date, Date of Birth
+phone: Phone
+email: Email
+authorization: Authorization
+state: State
+zip: Zip
+street-address-1: Street Address
+city: City
+street-address-2: Street Address Line 2
+gender: Gender
+ethinicity: ethnicity	
+ins-plan: Ins Plan
+ins-ID: Ins ID
+state-ID: State ID
+ssn: SSN
+p-first: P First
+p-last: P Last
+height: Height
+weight: Weight
+relation: Relation
+diagosis-code: Diagnosis Code
+condition-form:  Does the patient have any of the following conditions?
+responder: Responder
+exposure: What is patients exposure to others who are known to have COVID-19?
+treatment-recved: Has patient or anyone in your household visited or received treatment in the past 30 days?
+care-for-quarantine: Has patient or anyone in your household cared for an individual who is in quarantine?
+tested-30-days: Has patient or anyone in your household been tested for Covid-19?
+has-symptoms-21-days: Has patient or anyone in your household had any of the following symptoms in the last 21 days?

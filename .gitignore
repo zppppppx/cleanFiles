@@ -5,6 +5,8 @@
 __pycache__
 .pytest_cache
 .vscode
+Pipfile*
+build
 
 # test files
 test.py

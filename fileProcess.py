@@ -1,7 +1,7 @@
 import pandas as pd
-import numpy as np
 import os
 from tqdm import tqdm
+import numpy as np
 
 class cleanFile:
     """
@@ -58,7 +58,6 @@ class cleanFile:
     
         return column_standard, column_aliases
 
-
     def unifyAlises(self):
         """
         Use the self.column_alias to create a str to str dict which is used to turn the aliases to standard
@@ -100,6 +99,58 @@ class cleanFile:
 
         return check_list
 
+    def __cleanDataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Make the dataframe standard-framed
+        """
+        check_list = self.checkColumn(df.keys())
+        df.rename(columns=check_list, inplace=True)
+
+        tube_entry = self.column_standard['tube-number'] # order id column
+        first_name_entry = self.column_standard['first-name'] # first name column
+        last_name_entry = self.column_standard['last-name'] # last name column
+
+        # If this sheet does not contain any information about order id or name information,
+        # this could not be a valid data sheet, and we can skip it
+        if(tube_entry not in df.keys() and 
+            first_name_entry not in df.keys() and last_name_entry not in df.keys()):
+            return pd.DataFrame(columns=self.column_standard.values())
+
+        # Drop all the columns that are not in the standard file columns
+        column_diff = list(set(df.keys()).difference(set(self.column_standard.values())))
+        df.drop(columns=column_diff, inplace=True)
+
+        # make a template to fill the df_sheet, so that df_sheet becomes the 
+        # same structure as the self.df
+        template = pd.DataFrame(columns=self.column_standard.values()) 
+        df = df.merge(template, how='left')
+
+        # eliminate invalid records that don't have any information about names or order id
+        df.dropna(how='all', subset=[first_name_entry, last_name_entry, tube_entry], inplace=True)
+
+        return df
+
+    def __aggregate(self):
+        """
+        Aggregate the two dataframes: self.data_order and self.data_info to self.df
+        """
+        first_name_entry = self.column_standard['first-name'] # first name column
+        last_name_entry = self.column_standard['last-name'] # last name column
+        dob_entry = self.column_standard['date-of-birth'] # date of birth column
+        tube_entry = self.column_standard['tube-number'] # order id column
+
+        # Aggregate the data of personal information and order id
+        self.df_order.reset_index(inplace=True)
+        self.df_order.set_index(keys=[first_name_entry, last_name_entry], inplace=True)
+        self.df_info.set_index(keys=[first_name_entry, last_name_entry], inplace=True)
+        self.df = self.df_order.combine_first(self.df_info)
+        self.df.reset_index(inplace=True)
+
+        self.df = self.df[self.column_standard.values()] # reset to standard column order
+        self.df.dropna(subset=[tube_entry, first_name_entry, last_name_entry], how='any', inplace=True) # discard the data that still has no order id
+
+        self.df = self.df.sort_values(by=[first_name_entry, last_name_entry]) # sort by names
+
     def processFile(self, file_name: str):
         """
         Process the file of any forms. This function will read all the 
@@ -116,33 +167,19 @@ class cleanFile:
 
         for sheet in df_file.keys():
             df_sheet = df_file[sheet]
-
-            # change the column names to standard column names
-            check_list = self.checkColumn(df_sheet.keys())
-            df_sheet.rename(columns=check_list, inplace=True)
-
             tube_entry = self.column_standard['tube-number'] # order id column
             first_name_entry = self.column_standard['first-name'] # first name column
             last_name_entry = self.column_standard['last-name'] # last name column
 
-            # If this sheet does not contain any information about order id or name information,
-            # this could not be a valid data sheet, and we can skip it
-            if(tube_entry not in df_sheet.keys() and 
-                first_name_entry not in df_sheet.keys() and last_name_entry not in df_sheet.keys()):
-                continue
-
-            # Drop all the columns that are not in the standard file columns
-            column_diff = list(set(df_sheet.keys()).difference(set(self.column_standard.values())))
-            df_sheet.drop(columns=column_diff, inplace=True)
-
-            # make a template to fill the df_sheet, so that df_sheet becomes the 
-            # same structure as the self.df
-            template = pd.DataFrame(columns=self.column_standard.values()) 
-            df_sheet = df_sheet.merge(template, how='left')
-            # print(df_sheet.keys())
-
-            # eliminate invalid records that don't have any information about names or order id
-            df_sheet.dropna(how='all', subset=[first_name_entry, last_name_entry, tube_entry], inplace=True)
+            df_sheet = self.__cleanDataframe(df_sheet) # change to standard report form
+            # clean names
+            df_sheet[first_name_entry] = df_sheet[first_name_entry].fillna('') # fill nan first
+            df_sheet[last_name_entry] = df_sheet[last_name_entry].fillna('') # fill nan first
+            df_sheet[first_name_entry] = df_sheet[first_name_entry].map(lambda x: x.strip().capitalize(), na_action='ignore') # strip all the blank space
+            df_sheet[last_name_entry] = df_sheet[last_name_entry].map(lambda x: x.strip().capitalize(), na_action='ignore') # strip all the blank space
+            # print(df_sheet[first_name_entry].info())
+            df_sheet[first_name_entry] = df_sheet[first_name_entry].replace('', None) # change to nan again
+            df_sheet[last_name_entry] = df_sheet[last_name_entry].replace('', None) # change to nan again
 
             df_order = df_sheet.dropna(subset=[tube_entry]) # the dataframe that contrains order id
             df_info = df_sheet.loc[pd.isnull(df_sheet[tube_entry])] # the dataframe that contrains testant info
@@ -154,35 +191,12 @@ class cleanFile:
             self.df_order.reset_index(inplace=True)
             self.df_order.drop_duplicates(subset=[tube_entry], keep='first', inplace=True)
 
-            
-            # self.df.set_index(keys=[tube_entry], inplace=True)
-            # df_order_id.set_index(keys=[tube_entry], inplace=True)
-            # self.df = self.df.combine_first(df_order_id)
-            # self.df.reset_index(inplace=True)
-            # print(self.df)
-
-
             # Find the names that already exist in the overall dataframe
             self.df_info.set_index(keys=[first_name_entry, last_name_entry], inplace=True)
             df_info.set_index(keys=[first_name_entry, last_name_entry], inplace=True)
             self.df_info = self.df_info.combine_first(df_info)
             self.df_info.reset_index(inplace=True)
             self.df_info.drop_duplicates(subset=[first_name_entry, last_name_entry], keep='first', inplace=True)
-            # df_info = pd.concat([df_info, self.df])
-            # df_info.drop_duplicates(subset=[first_name_entry, last_name_entry], keep='first', inplace=True)
-
-            # Use the new information to fill the overall dataframe
-
-            # print("The memroy has been used with {} for info and {} for order"
-            #       .format(self.df_info.info(verbose=False, memory_usage='deep'), self.df_order.info(verbose=False, memory_usage='deep')))
-
-
-            # self.df.set_index(keys=[first_name_entry, last_name_entry], inplace=True)
-            # df_info.set_index(keys=[first_name_entry, last_name_entry], inplace=True)
-            # print(df_info.info())
-            # print(self.df.info())
-            # self.df = self.df.combine_first(df_info)
-            # self.df.reset_index(inplace=True)
                     
             
     def walkthrough(self):
@@ -200,29 +214,99 @@ class cleanFile:
         for xlsx_file in tqdm(xlsx_files):
             self.processFile(xlsx_file)
 
-        first_name_entry = self.column_standard['first-name'] # first name column
-        last_name_entry = self.column_standard['last-name'] # last name column
-        dob_entry = self.column_standard['date-of-birth'] # date of birth column
-        tube_entry = self.column_standard['tube-number'] # order id column
-
-        # Aggregate the data of personal information and order id
-        self.df_order.reset_index(inplace=True)
-        self.df_order.set_index(keys=[first_name_entry, last_name_entry], inplace=True)
-        self.df_info.set_index(keys=[first_name_entry, last_name_entry], inplace=True)
-        self.df = self.df_order.combine_first(self.df_info)
-        self.df.reset_index(inplace=True)
-
-        self.df = self.df[self.column_standard.values()] # reset to standard column order
-        self.df.dropna(subset=[tube_entry, first_name_entry, last_name_entry], how='any', inplace=True) # discard the data that still has no order id
-
-        # Clean the forms of the data
-        self.df[first_name_entry] = self.df[first_name_entry].map(lambda x: x.strip()) # strip all the blank space
-        self.df[last_name_entry] = self.df[last_name_entry].map(lambda x: x.strip()) # strip all the blank space
-
-        # self.df[dob_entry] = pd.to_datetime(self.df[dob_entry], errors='coerce') # standardlize the date time representation
-        # self.df[dob_entry] = pd.PeriodIndex(self.df[dob_entry], freq='D')
-        # self.df[dob_entry] = self.df[dob_entry]
-
-        self.df = self.df.sort_values(by=[first_name_entry, last_name_entry]) # sort by names
+        
+        self.__aggregate()
+        
     
+    @staticmethod
+    def resolveNames(name_file):
+        names = []
+        with open(name_file) as f:
+            lines = f.readlines()
+            for name in lines:
+                name = name.split()
+                name = [*map(lambda x: x.strip(), name)]
+                names.append(name)
+
+        return names
+
+    def searchByNames(self, name_file):
+        """
+        Considering that the form could have some dislocation, we may need to handle it manually
+        """
+        self.df_info = pd.DataFrame(columns=self.column_standard.values())
+        self.df_order = pd.DataFrame(columns=self.column_standard.values())
+
+
+        xlsx_files = []
+        for (dirpath, dirnames, filenames) in os.walk(self.file_root):
+            for filename in filenames:
+                if(filename.endswith('.xlsx')):
+                    filename = os.path.join(dirpath, filename)
+                    # self.processFile(filename)
+                    xlsx_files.append(filename)
+
+        names = self.resolveNames(name_file)
+        
+        for xlsx_file in tqdm(xlsx_files):
+            self.__searchByName(names, xlsx_file)
+
+        self.__aggregate()
+        
+    def __searchByName(self, names, xlsx_file):
+        """
+        Search one file by first name and last name
+        """
+        df = pd.read_excel(xlsx_file, sheet_name=None, dtype="string")
+        print(names)
+        names = [*map(lambda x: x[0].capitalize() + ' ' + x[1].capitalize(), names)]
+        
+        for sheet in df.keys():
+            df_sheet = df[sheet]
+
+            tube_entry = self.column_standard['tube-number'] # order id column
+            first_name_entry = self.column_standard['first-name'] # first name column
+            last_name_entry = self.column_standard['last-name'] # last name column
+
+            df_sheet = self.__cleanDataframe(df_sheet) # change to standard report form
+
+            # clean names
+            
+            df_sheet[first_name_entry] = df_sheet[first_name_entry].fillna('') # fill nan first
+            df_sheet[last_name_entry] = df_sheet[last_name_entry].fillna('') # fill nan first
+            
+            df_sheet[first_name_entry] = df_sheet[first_name_entry].map(lambda x: x.strip().capitalize(), na_action='ignore') # strip all the blank space
+            df_sheet[last_name_entry] = df_sheet[last_name_entry].map(lambda x: x.strip().capitalize(), na_action='ignore') # strip all the blank space
+            # print(df_sheet[first_name_entry].info())
+            df_sheet[first_name_entry] = df_sheet[first_name_entry].replace('', None) # change to nan again
+            df_sheet[last_name_entry] = df_sheet[last_name_entry].replace('', None) # change to nan again
+            
+
+            # keep two dataframes: 1. with 'full' information, which is order id and full name
+            # 2. without order id but with a requested name
+            
+            df_order = df_sheet.dropna(subset=[tube_entry]) # the dataframe that contrains order id
+            df_names = df_order[first_name_entry].fillna('') + ' ' + df_order[last_name_entry].fillna('')
+            df_order = df_order.loc[df_names.isin(names)]
+
+            df_info = df_sheet.loc[pd.isnull(df_sheet[tube_entry])] # the dataframe that contrains testant info
+            df_names = df_info[first_name_entry].fillna('').apply(str) + ' ' + df_info[last_name_entry].fillna('').apply(str)
+            df_info = df_info.loc[df_names.isin(names)]
+            
+            # Add the dataframe with order id to the overall dataframe
+            self.df_order.set_index(keys=[tube_entry], inplace=True)
+            df_order.set_index(keys=[tube_entry], inplace=True)
+            self.df_order = self.df_order.combine_first(df_order)
+            self.df_order.reset_index(inplace=True)
+            self.df_order.drop_duplicates(subset=[tube_entry], keep='first', inplace=True)
+
+            # Find the names that already exist in the overall dataframe
+            self.df_info.set_index(keys=[first_name_entry, last_name_entry], inplace=True)
+            df_info.set_index(keys=[first_name_entry, last_name_entry], inplace=True)
+            self.df_info = self.df_info.combine_first(df_info)
+            self.df_info.reset_index(inplace=True)
+            self.df_info.drop_duplicates(subset=[first_name_entry, last_name_entry], keep='first', inplace=True)
+
+            
+
             
